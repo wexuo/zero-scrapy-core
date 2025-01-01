@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 
 import java.net.URL;
-import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Selenium 页面下载器，需结合 webdriver.remote.address 配置使用
@@ -43,7 +43,7 @@ public class SeleniumDownloader implements Downloader {
         try {
             driver = getLocalWebDriver();
             try {
-                driver.manage().timeouts().pageLoadTimeout(Duration.ofMillis(timeout));
+                driver.manage().timeouts().pageLoadTimeout(timeout, TimeUnit.SECONDS);
                 driver.get(request.getUrl());
             } catch (final Exception e) {
                 // DO NOTHING
@@ -69,7 +69,7 @@ public class SeleniumDownloader implements Downloader {
 
     protected void afterDownload(final WebDriver driver, final Request request) {
         if (Objects.nonNull(xpath)) {
-            final WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(timeout));
+            final WebDriverWait wait = new WebDriverWait(driver, timeout);
             wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath(xpath)));
         }
     }
