@@ -14,20 +14,27 @@ import java.util.Objects;
 public class Executors {
 
     public static <T> List<T> getResult(final Extractor extractor, final Integer page, final Class<T> clazz) {
-        final String target = getTarget(extractor, page);
-        final Site site = Site.me().setDelay(5000).setUserAgent(UserAgentUtil.random())
-                .addHeader(Constant.HOST, extractor.getDomain())
-                .addHeader(Constant.REFERER, extractor.getDomain());
+        return getResult(extractor, getTarget(extractor, page), clazz);
+    }
+
+    public static <T> List<T> getResult(final Extractor extractor, final String target, final Class<T> clazz) {
         final Downloader downloader = new DefaultDownloader(extractor.getProxy());
         final Processor processor = new ExtractorPageProcessor(extractor);
-        return Spider.create(site).setDownloader(downloader).thread(20).setProcessor(processor).getResult(target, clazz);
+        return Spider.create(getSite(extractor)).setDownloader(downloader).thread(20).setProcessor(processor).getResult(target, clazz);
+    }
+
+    private static Site getSite(final Extractor extractor) {
+        return Site.me().setDelay(5000).setUserAgent(UserAgentUtil.random())
+                .addHeader(Constant.HOST, extractor.getDomain())
+                .addHeader(Constant.REFERER, extractor.getDomain());
     }
 
     public static <T> List<T> getRemoteResult(final Extractor extractor, final Integer page, final Class<T> clazz) {
-        final String target = getTarget(extractor, page);
-        final Site site = Site.me().setDelay(5000).setUserAgent(UserAgentUtil.random())
-                .addHeader(Constant.HOST, extractor.getDomain())
-                .addHeader(Constant.REFERER, extractor.getDomain());
+        return getRemoteResult(extractor, getTarget(extractor, page), clazz);
+    }
+
+    public static <T> List<T> getRemoteResult(final Extractor extractor, final String target, final Class<T> clazz) {
+        final Site site = getSite(extractor);
         final Downloader downloader = new SeleniumDownloader(extractor.getWaitXpath(), site.getTimeout());
         final Processor processor = new ExtractorPageProcessor(extractor);
         return Spider.create(site).setDownloader(downloader).thread(20).setProcessor(processor).getResult(target, clazz);
@@ -35,14 +42,28 @@ public class Executors {
 
     public static String getTarget(final Extractor extractor, final Integer page) {
         final PageLinkRule rule = extractor.getPageLinkRule();
-        if (page == 1 && Objects.nonNull(rule.getStart())) {
-            final String start = rule.getStart();
-            if (start.startsWith(Constant.HTTP)) {
-                return start;
-            }
-            return extractor.getDomain() + start;
-        }
         final String format = rule.getFormat();
+        return getTarget(extractor, page, rule.getStart(), format);
+    }
+
+    public static String getTarget(final Extractor extractor, final Integer page, final String... args) {
+        final PageLinkRule rule = extractor.getPageLinkRule();
+        String format = rule.getFormat();
+        if (Objects.nonNull(args)) {
+            for (final String arg : args) {
+                format = format.replaceFirst("%s", arg);
+            }
+        }
+        return getTarget(extractor, page, rule.getStart(), format);
+    }
+
+    private static String getTarget(final Extractor extractor, final Integer page, final String start, final String format) {
+        if (page == 1 && Objects.nonNull(start)) {
+            if (format.startsWith(Constant.HTTP)) {
+                return String.format(format, start);
+            }
+            return String.format(extractor.getDomain() + format, start);
+        }
         if (format.startsWith(Constant.HTTP)) {
             return String.format(format, page);
         }
