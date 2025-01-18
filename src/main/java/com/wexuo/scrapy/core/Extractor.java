@@ -17,6 +17,7 @@ public class Extractor {
     private String domain;
     private Boolean proxy = false;
     private String waitXpath;
+    private List<String> args;
     private PageLinkRule pageLinkRule;
     private ItemLinkRule itemLinkRule;
     private final List<FieldRule> fields = new ArrayList<>();

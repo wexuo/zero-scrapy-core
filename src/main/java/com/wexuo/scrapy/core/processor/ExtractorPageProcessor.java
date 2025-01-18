@@ -32,6 +32,9 @@ public class ExtractorPageProcessor implements Processor {
 
     @Override
     public void process(final Page page) {
+        if (page.isIgnore()) {
+            return;
+        }
         if (extract(page)) {
             page.addTargets(extractLinks(page, extractor.getItemLinkRule()));
             extractPageFieldValue(page, extractor.getItemLinkRule(), extractor.getFields());

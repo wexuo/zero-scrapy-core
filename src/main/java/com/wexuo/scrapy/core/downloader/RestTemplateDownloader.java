@@ -9,19 +9,24 @@ import org.springframework.web.client.RestTemplate;
 
 /**
  * 默认下载器，使用 RestTemplate 请求网页内容
+ *
  * @see org.springframework.web.client.RestTemplate
  */
-public class DefaultDownloader implements Downloader {
+public class RestTemplateDownloader extends AbstractDownloader {
 
     private final RestTemplate restTemplate;
 
-    public DefaultDownloader(final boolean proxy) {
+    public RestTemplateDownloader(final boolean proxy) {
+        this(proxy, null);
+    }
+
+    public RestTemplateDownloader(final boolean proxy, final DownloaderFilter filter) {
+        super(filter);
         this.restTemplate = proxy ? HttpUtil.getProxyRestTemplate() : HttpUtil.getRestTemplate();
     }
 
     @Override
-    public Page download(final Request request) {
-        final Page page = new Page(request);
+    public Page download(final Request request, final Page page) {
         final String url = request.getUrl();
         final HttpMethod method = request.getMethod();
         final HttpHeaders headers = request.getHeaders();

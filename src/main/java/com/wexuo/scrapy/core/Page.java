@@ -30,6 +30,9 @@ public class Page {
     @Setter
     private HttpStatus status;
 
+    @Setter
+    private boolean ignore;
+
     private final Request request;
 
     private final List<Request> targets;

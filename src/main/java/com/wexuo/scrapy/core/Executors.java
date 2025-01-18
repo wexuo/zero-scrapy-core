@@ -1,12 +1,14 @@
 package com.wexuo.scrapy.core;
 
 import com.wexuo.scrapy.core.data.PageLinkRule;
-import com.wexuo.scrapy.core.downloader.DefaultDownloader;
 import com.wexuo.scrapy.core.downloader.Downloader;
+import com.wexuo.scrapy.core.downloader.DownloaderFilter;
+import com.wexuo.scrapy.core.downloader.RestTemplateDownloader;
 import com.wexuo.scrapy.core.downloader.SeleniumDownloader;
 import com.wexuo.scrapy.core.processor.ExtractorPageProcessor;
 import com.wexuo.scrapy.core.processor.Processor;
 import com.wexuo.scrapy.core.util.UserAgentUtil;
+import org.openqa.selenium.WebDriver;
 
 import java.util.List;
 import java.util.Objects;
@@ -14,11 +16,15 @@ import java.util.Objects;
 public class Executors {
 
     public static <T> List<T> getResult(final Extractor extractor, final Integer page, final Class<T> clazz) {
-        return getResult(extractor, getTarget(extractor, page), clazz);
+        return getResult(extractor, getTarget(extractor, page), clazz, null);
     }
 
-    public static <T> List<T> getResult(final Extractor extractor, final String target, final Class<T> clazz) {
-        final Downloader downloader = new DefaultDownloader(extractor.getProxy());
+    public static <T> List<T> getResult(final Extractor extractor, final Integer page, final Class<T> clazz, final DownloaderFilter filter) {
+        return getResult(extractor, getTarget(extractor, page), clazz, filter);
+    }
+
+    public static <T> List<T> getResult(final Extractor extractor, final String target, final Class<T> clazz, final DownloaderFilter filter) {
+        final Downloader downloader = new RestTemplateDownloader(extractor.getProxy(), filter);
         final Processor processor = new ExtractorPageProcessor(extractor);
         return Spider.create(getSite(extractor)).setDownloader(downloader).thread(20).setProcessor(processor).getResult(target, clazz);
     }
@@ -29,13 +35,13 @@ public class Executors {
                 .addHeader(Constant.REFERER, extractor.getDomain());
     }
 
-    public static <T> List<T> getRemoteResult(final Extractor extractor, final Integer page, final Class<T> clazz) {
-        return getRemoteResult(extractor, getTarget(extractor, page), clazz);
+    public static <T> List<T> getRemoteResult(final Extractor extractor, final Integer page, final Class<T> clazz, final WebDriver driver) {
+        return getRemoteResult(extractor, getTarget(extractor, page), clazz, driver);
     }
 
-    public static <T> List<T> getRemoteResult(final Extractor extractor, final String target, final Class<T> clazz) {
+    public static <T> List<T> getRemoteResult(final Extractor extractor, final String target, final Class<T> clazz, final WebDriver driver) {
         final Site site = getSite(extractor);
-        final Downloader downloader = new SeleniumDownloader(extractor.getWaitXpath(), site.getTimeout());
+        final Downloader downloader = new SeleniumDownloader(extractor.getWaitXpath(), site.getTimeout(), driver);
         final Processor processor = new ExtractorPageProcessor(extractor);
         return Spider.create(site).setDownloader(downloader).thread(20).setProcessor(processor).getResult(target, clazz);
     }

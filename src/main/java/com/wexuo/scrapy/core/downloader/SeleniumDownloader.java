@@ -5,16 +5,12 @@ import com.wexuo.scrapy.core.Request;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 
-import java.net.URL;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -23,7 +19,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @see org.openqa.selenium.remote.RemoteWebDriver
  */
-public class SeleniumDownloader implements Downloader {
+public class SeleniumDownloader extends AbstractDownloader {
 
     private static final Logger LOG = LoggerFactory.getLogger(SeleniumDownloader.class);
 
@@ -31,19 +27,24 @@ public class SeleniumDownloader implements Downloader {
 
     private final long timeout;
 
-    public SeleniumDownloader(final String xpath, final long timeout) {
+    private final WebDriver driver;
+
+    public SeleniumDownloader(final String xpath, final long timeout, final WebDriver driver) {
+        this(xpath, timeout, null, driver);
+    }
+
+    public SeleniumDownloader(final String xpath, final long timeout, final DownloaderFilter filter, final WebDriver driver) {
+        super(filter);
         this.xpath = xpath;
         this.timeout = timeout;
+        this.driver = driver;
     }
 
     @Override
-    public Page download(final Request request) {
-        final Page page = new Page(request);
-        WebDriver driver = null;
+    public Page download(final Request request, final Page page) {
         try {
-            driver = getLocalWebDriver();
             try {
-                driver.manage().timeouts().pageLoadTimeout(timeout, TimeUnit.SECONDS);
+                driver.manage().timeouts().pageLoadTimeout(timeout, TimeUnit.MILLISECONDS);
                 driver.get(request.getUrl());
             } catch (final Exception e) {
                 // DO NOTHING
@@ -60,53 +61,17 @@ public class SeleniumDownloader implements Downloader {
             onError(request, e);
             LOG.info("download page {} error", request.getUrl(), e);
             throw e;
-        } finally {
-            if (Objects.nonNull(driver)) {
-                driver.quit();
-            }
         }
     }
 
     protected void afterDownload(final WebDriver driver, final Request request) {
         if (Objects.nonNull(xpath)) {
-            final WebDriverWait wait = new WebDriverWait(driver, timeout);
+            final WebDriverWait wait = new WebDriverWait(driver, timeout / 1000);
             wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath(xpath)));
         }
     }
 
     protected void onError(final Request request, final Throwable e) {
 
-    }
-
-    private WebDriver getRemoteWebDriver() {
-        try {
-            final String address = System.getProperty("webdriver.remote.address");
-            if (Objects.isNull(address)) {
-                throw new RuntimeException("webdriver.remote.address is null");
-            }
-            return new RemoteWebDriver(new URL(address), getChromeOptions());
-        } catch (final Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public WebDriver getLocalWebDriver() {
-        return new ChromeDriver(getChromeOptions());
-    }
-
-    private ChromeOptions getChromeOptions() {
-        final ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless");
-        options.addArguments("--disable-gpu");
-        options.addArguments("--ignore-certificate-errors");
-        options.addArguments("--allow-running-insecure-content");
-        options.addArguments("--disable-popup-blocking");
-        options.addArguments("--no-sandbox");
-        options.addArguments("--remote-allow-origins=*");
-        final String address = System.getProperty("webdriver.debugger.address");
-        if (Objects.nonNull(address)) {
-            options.setExperimentalOption("debuggerAddress", address);
-        }
-        return options;
     }
 }
